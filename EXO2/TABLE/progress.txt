@@ -1,0 +1,6 @@
+TOF	// fait (10%)
+TObarF	// fait (10%)
+TOVC	// fait (10%)
+TOVCbar	// fait (10%)
+TObarVC	// fait (10%)
+TObarVCbar	// fait (10%)

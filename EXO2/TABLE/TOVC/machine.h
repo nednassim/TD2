@@ -29,28 +29,29 @@
 #ifdef LOCAL
 #define debug(format, ...) { printf("[%s",#__VA_ARGS__);printf("] : ") ; printf(format"\n",__VA_ARGS__);}
 #else
-#define debuf(...) 42
+#define debug(...) 42
 #endif
 
-#define MAX 30
+#define MAX 1024
 
 /* structure d'un enregistrement */
 typedef struct Tenreg {
-	int longueur;			// 4 bytes -> 3 caracteres
+	int taille;			// 4 bytes -> 3 caracteres
    int cle; 	         // 4 bytes -> 3 caracteres
-   int supp;   	  		// 4 byte -> 3 caracteres (booleen)
-	char info[MAX - 6];	// (MAX - 6) bytes (6 = taille(cle) + taille(supp))  
-	// la taille de l'enregistrement est variable
+   int supp;   	  		// 4 byte -> 1 caractere (booleen)
+	char info[MAX - 7];	// (MAX - 7) bytes (7 = taille(cle) + taille(supp) + taille(supp))  
+	// la taille du buffer dans la MC : 4 + 4 + 4 + (MAX - 7) =  bytes
+	// la taille du buffer dans le fichier : 3 + 3 + 1 + MAX - 7 = MAX bytes
 } Tenreg;
 
-typedef char Semi[MAX];
+typedef char Semi[MAX + 1];	// l'enregistrement sous forme de chaine de caracteres
 
 /* structure d'un bloc */
 typedef struct Tbloc {
-   char tab[MAX]; 	   // un tableau d'enregistrements d'une capacite MAX (28 * 30 = 840 bytes)
-   int NB;          		// nombre d'enregistrements dans tab (<= b)  (4 bytes)
+   char tab[MAX + 1]; 	   // un tableau d'enregistrements d'une capacite MAX 
+   int NB;          		// nombre d'enregistrements dans tab
    // la taille du bloc est : 844 bytes (fixe)
-} Tbloc;
+} Buffer;
 
 
 // structure de l'entete
@@ -88,14 +89,18 @@ void Suppression_Logique_TOVC(TOVC *fichier, int cle);	// procedure de suppressi
 void Suppression_Physique_TOVC(TOVC *fichier,char nom_fichier[20]); // procedure pour suppression physique
 void Reorganisation_TOVC(TOVC *fichier,char nom_fichier[20]);	// procedure pour reorganiser un fichier TOVC
 
+// procedures sur les semi-enregistrements
+int taille_semi(Semi se);
+int cle_semi(Semi se);
+int supp_semi(Semi se);
+char *info_semi(Semi se);
+
 // procedures sur les chaines de caracteres 
 void num_chaine(int num, int max, char *s);
-void copier_chaine(char *s, int i, int max, char *r);
-void couper_chaine(char *s, int i, int max);
 void recuperer_chaine(TOVC *fichier,int n , int *i, int *j, Semi se);	
 void ecrire_chaine(TOVC *fichier,int n , int *i, int *j, Semi se);
-void semi_enreg(Tenreg *e, Semi semi );
-void enreg_semi(Tenreg e, Semi semi);
+void enreg_semi(Tenreg e, Semi *se);
+void semi_enreg(Tenreg *e, Semi se);
 
 /* L'affichage */
 void Afficher_Bloc(TOVC *fichier,int i);	// procedure pour afficher un bloc dans un fichier TOVC

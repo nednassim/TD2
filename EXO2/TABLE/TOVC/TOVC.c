@@ -14,7 +14,7 @@ int entete(TOVC *F, int i) {
 			break;
 		}
 		case 2: {
-			return (F->entete.cpt);
+			return (F->entete.pos);
 			break;
 		}
 		case 3: {
@@ -57,9 +57,9 @@ void LireDir(TOVC *F, int i , Buffer *buf) {
 }
 
 // procedure pour ecrire un buffer dans fichier
-void EcrireDir(TOVC *F, int i, Buffer *buf) {
+void EcrireDir(TOVC *F, int i, Buffer buf) {
 	fseek(F->fich, sizeof(Entete) + (i - 1) * sizeof(Buffer), SEEK_SET);
-	fwrite(buf, sizeof(Buffer), 1, F->fich);
+	fwrite(&buf, sizeof(Buffer), 1, F->fich);
 }
 	
 
@@ -68,7 +68,7 @@ void Alloc_Bloc(TOVC *F) {
 	Buffer *buf = (Buffer*) calloc(MAX, sizeof(Buffer));
 //	LireDir(fichier, entete(fichier, 1) + 1, buf);
 	fseek(F->fich, sizeof(Entete) + (entete(F, 1)) * sizeof(Buffer), SEEK_SET);
-	EcrireDir(F, entete(F, 1), buf);
+	EcrireDir(F, entete(F, 1), *buf);
 	Aff_entete(F, 1, entete(F, 1) + 1);
 }
 
@@ -112,69 +112,73 @@ void Fermer(TOVC *F) {
 	free(F);
 }
 
-// transforme un int num en un string s de longueur max la difference est comblée par des zéros 
-void num_chaine(int num, int max, char * s) {
-    char s_num[4]; // num est sur 3 positions
-    sprintf(s_num, "%d", num);
-    int j = max - strlen(s_num) ;
-    sprintf(s, "%s", "");
-    while (j--) {
-		 sprintf(s,"%s0",s);
-	 }
-    sprintf(s, "%s%s", s, s_num);
+/* le semi-enregistrement */
+// fonction pour recuperer la taille d'un semi
+int taille_semi(Semi se) {
+   char taille[4] = "";
+   strncpy(taille, se , 3);
+   return (atoi(taille));
+}
+// fonction pour recuperer la cle d'un semi
+int cle_semi(Semi se) {
+   char cle[4] = "";
+   strncpy(cle, &se[3] , 3);
+   return (atoi(cle));
+}
+// fonction pour recuperer le supp d'un semi
+int supp_semi(Semi se) {
+   char supp = '\0';
+   supp = se[6];
+   return (supp - '0');
+}
+// fonction pour recuperer l'info d'un semi
+char *info_semi(Semi se) {
+   char *info = calloc(taille_semi(se) + 1, sizeof(char));
+   sprintf(info,"%s", "");
+   debug("%i", taille_semi(se));
+   strncpy(info, &se[7] , taille_semi(se));
+   return (info);
 }
 
-//  copier de la chaine s a partir de la position i une sous chaine r de longueur max */
-void copier_chaine(char *s, int i, int max, char *r) {
-   sprintf(r,"%s","");
-   while (i < strlen(s) && max > 0) {
-       sprintf(r, "%s%c", r, s[i]);
-       i++;
-       max--;
+/* procedure de conversion */
+// procedure pour convertir un entier en chaine de caracteres
+void num_chaine(int num, int max, char *s) {
+   char s_num[4]; // num est sur 3 positions
+   sprintf(s_num, "%d", num);
+   int j = max - strlen(s_num) ;
+   sprintf(s, "%s", "");
+   while (j--) {
+     sprintf(s,"%s0",s);
    }
+   sprintf(s, "%s%s", s, s_num);
 }
 
-// supprimer une partie de la chaine s de longueur max à partir de la position i 
-void couper_chaine(char *s, int i, int max) {
-   char part_droite[MAX + 1];
-   char part_gauche[MAX + 1];
-   copier_chaine(s, 0, i, part_gauche);
-   copier_chaine(s, i + max, strlen(s), part_droite);
-	sprintf(s,"%s%s",part_gauche, part_droite);
-}
-
-// transformer une chaine en un enregistrement
-void semi_to_enreg (Chaine se, Tnreg *e) {
-    char chaine[MAX + 1];
-    // la cle
-    sprintf(chaine,"%s", "");
-    copier_chaine(se, 3, 3, chaine);
-    e->cle = atoi(chaine);
-    // le booleen
-    sprintf(chaine, "%c", se[6]);
-    e->supp = atoi(chaine);
-    // l'info
-    copier_chaine(se, 7, strlen(se) - 7, e->info);
-}
-
-// transformer un enregistrement en un semi_enregistrement 
-void enreg_to_semi (Tenreg e, Semi se) {
+// procedure pour convertir un enregistrement en semi-enregistrement
+void enreg_semi (Tenreg e, Semi *se) {
     char chaine[4];
     int taille = strlen(e.info);
 
-    sprintf(se,"%s","");
-    // ecriture de la taille de l'info dans le semi enregistrement
+    sprintf(*se,"%s","");
+    // ecrire la taille de l'info dans le semi-enregistrement
     num_chaine(taille, 3, chaine);
-    sprintf(se,"%s%s", se, chaine);
+    sprintf(*se,"%s%s", *se, chaine);  // concatener l
     // écriture de la clé dans le semi enregistrement
-	 num_chaine(e.cle, 3, chaine);
-    sprintf(se,"%s%s", se, chaine);
+    num_chaine(e.cle, 3, chaine);
+    sprintf(*se,"%s%s", *se, chaine);
     // ecriture du booleen supp
     num_chaine(e.supp, 1, chaine);
-    sprintf(se,"%s%s", se, chaine);
+    sprintf(*se,"%s%s", *se, chaine);
     // ecriture de l'info
-    sprintf(se,"%s%s", se, e.info);
+    sprintf(*se,"%s%s", *se, e.info);
 }
+// procedure pour convertir un semi-enregistrement en enregistrement
+void semi_enreg(Tenreg *e, Semi se) {
+   e->taille = taille_semi(se);
+   e->cle = cle_semi(se);
+   e->supp = supp_semi(se);
+   strcpy(e->info, info_semi(se));
+}
+
 
 void recuperer_se(TOVC *F, int *i, int *j, Semi se) {
 	char taille[4];
@@ -197,7 +201,7 @@ void recuperer_se(TOVC *F, int *i, int *j, Semi se) {
 			(*j) = 1;
 		}
 	}
-	for (k = 0; k < (int atoi(taille)) + 4; k++) {
+	for (k = 0; k < (int) atoi(taille) + 4; k++) {
 		if ((*j) < MAX) {
 			sprintf(se, "%s%c", se, buf.tab[*j]);
 			(*j)++;
@@ -211,8 +215,57 @@ void recuperer_se(TOVC *F, int *i, int *j, Semi se) {
 }
 
 
+// procedure pour afficher un bloc
+void Afficher_Bloc(TOVC *F, int i) {
+   printf("+------------+\n");
+   char nb[5];
+   sprintf(nb, "% 4d", i);
+   printf("|  Bloc %s |\n", nb);
+   char s[70] = "+----------------------------------------------------------------+\n";
+   printf("%s", s);
+   int count = 0;
+   const int LINE = 64;
+	LireDir(F, i, &buf);
+   while (count < MAX) {
+      printf("|");
+      for (int i = 0; i < LINE; i++) {
+         printf("%c", buf.tab[count++]);
+      }
+      printf("|\n");
+   }
+   printf("%s", s);
+   printf("Le nombre d'enregistrements : %d\n", buf.NB);
 
-/*	La manipulation du fichier */
+}
+
+
+// procedure pour afficher l'entete d'un fichier
+void Afficher_Entete(TOVC *F) {
+   char s[50] = "+----------+----------+-----------+----------+\n";
+   char nb[5];
+   sprintf(nb, "% 4d", F->entete.nb);
+   char pos[5];
+   sprintf(pos, "% 4d", F->entete.pos);
+   char cpt_inser[5];
+   sprintf(cpt_inser, "% 4d", F->entete.cpt_inser);
+   char cpt_supp[5];
+   sprintf(cpt_supp, "% 4d", F->entete.cpt_supp);
+   printf("Entete\n");
+   printf("%s", s);
+   printf("|    nb    |    pos   | cpt_inser | cpt_supp |\n");
+   printf("%s", s);
+   printf("|      |        |       |        |\n");
+   printf("|  %s     |  %s    |  %s      |  %s    |\n", nb, pos, cpt_inser, cpt_supp);
+   printf("|      |        |       |        |\n");
+   printf("%s", s);
+   printf("|__ nb : le nombre de blocs utilises\n");
+   printf("|__ pos : la position libre au dernier bloc\n");
+   printf("|__ cpt_inser : le compteur d'insertions\n");
+   printf("|__ cpt_supp : le compteur de suppression\n");
+}
+
+/*
+//	La manipulation du fichier 
 // procedure de recherche dans un fichier TOVC
 void Recherche_TOVC(TOVC *F,int cle, int *i, int *j, int *trouve) {
 	*trouve = 0;
@@ -300,7 +353,7 @@ void Suppression_Logique_TOVC(TOVC *F, int cle) {
 		Fermer(F);
 	}
 }
-
+*/
 
 // procedure de suppression physique
 //void Suppression_Physique_TOVC(TOVC* fichier, char *nom_fichier) 

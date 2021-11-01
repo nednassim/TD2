@@ -15,7 +15,7 @@
 
 /* structure d'un enregistrement */
 typedef struct Tenreg {
-   int taille;        // 4 bytes -> 3 caracteres
+//   char delim = "$";	// 1 byte + 3 padding
    int cle;             // 4 bytes -> 3 caracteres
    int supp;            // 4 byte -> 1 caractere (booleen)
    char info[MAX - 7];  // (MAX - 7) bytes (7 = taille(cle) + taille(supp) + taille(supp))  
@@ -52,124 +52,69 @@ typedef struct TOVC {
 
 // variables generales
 Buffer buf;
-
-/* le semi-enregistrement */
-// fonction pour recuperer la taille d'un semi
-int taille_semi(Semi se) {
-	 char taille[4] = "";
-	 strncpy(taille, se , 3);
-	 return (atoi(taille));
+TOVC *F;
+// procedure pour lire un buffer du fichier
+void LireDir(TOVC *F, int i , Buffer *buf) {
+   fseek(F->fich, sizeof(Entete) + (i - 1) * sizeof(Buffer), SEEK_SET);
+   fread(buf, sizeof(Buffer), 1, F->fich);
 }
-// fonction pour recuperer la cle d'un semi
-int cle_semi(Semi se) {
-	 char cle[4] = "";
-	 strncpy(cle, &se[3] , 3);
-	 return (atoi(cle));
-}
-// fonction pour recuperer le supp d'un semi
-int supp_semi(Semi se) {
-	 char supp = '\0';
-	 supp = se[6];
-	 return (supp - '0');
-}
-// fonction pour recuperer l'info d'un semi
-char *info_semi(Semi se) {
-	 char *info = calloc(taille_semi(se) + 1, sizeof(char));
-	 sprintf(info,"%s", "");
-	 debug("%i", taille_semi(se));
-	 strncpy(info, &se[7] , taille_semi(se));
-	 return (info);
-}
-
-/* procedure de conversion */
-// procedure pour convertir un entier en chaine de caracteres 
-void num_chaine(int num, int max, char *s) {
-	 char s_num[4]; // num est sur 3 positions
-	 sprintf(s_num, "%d", num);
-	 int j = max - strlen(s_num) ;
-	 sprintf(s, "%s", "");
-	 while (j--) {
-		sprintf(s,"%s0",s);
-	 }
-	 sprintf(s, "%s%s", s, s_num);
-}
-// procedure pour convertir un enregistrement en semi-enregistrement
-void enreg_semi (Tenreg e, Semi *se) {
-    char chaine[4];
-    int taille = strlen(e.info);
-               
-    sprintf(*se,"%s","");
-    // ecrire la taille de l'info dans le semi-enregistrement
-    num_chaine(taille, 3, chaine);
-    sprintf(*se,"%s%s", *se, chaine);  // concatener l
-    // écriture de la clé dans le semi enregistrement
-    num_chaine(e.cle, 3, chaine);
-    sprintf(*se,"%s%s", *se, chaine);
-    // ecriture du booleen supp
-    num_chaine(e.supp, 1, chaine);
-    sprintf(*se,"%s%s", *se, chaine);
-    // ecriture de l'info
-    sprintf(*se,"%s%s", *se, e.info);
-}
-// procedure pour convertir un semi-enregistrement en enregistrement
-void semi_enreg(Tenreg *e, Semi se) {
-	 e->taille = taille_semi(se);
-	 e->cle = cle_semi(se);
-	 e->supp = supp_semi(se);
-	 strcpy(e->info, info_semi(se));
-}
-
- 
 
 // procedure pour afficher un bloc
-void afficher_bloc(Buffer buf, int i) {
-	printf("+------------+\n");
-	char nb[5];
-	sprintf(nb, "% 4d", i);
-	printf("|  Bloc %s |\n", nb);
-	char s[70] = "+----------------------------------------------------------------+\n";
-	printf("%s", s);
-	int count = 0;
-	const int LINE = 64;
-	while (count < MAX) {
-		printf("|");
-		for (int i = 0; i < LINE; i++) {
-			printf("%c", buf.tab[count++]);
-		}
-		printf("|\n");
-	}
-	printf("%s", s);
-	printf("Le nombre d'enregistrements : %d\n", buf.NB);
+void Afficher_Bloc(Buffer buf, int i) {
+   printf("+------------+\n");
+   char nb[5];
+   sprintf(nb, "% 4d", i);
+   printf("|  Bloc %s |\n", nb);
+   char s[70] = "+----------------------------------------------------------------+\n";
+   printf("%s", s);
+   int count = 0;
+   const int LINE = 64;
+//   LireDir(F, i, &buf);
+   while (count < MAX) {
+      printf("|");
+      for (int i = 0; i < LINE; i++) {
+         printf("%c", buf.tab[count++]);
+      }
+      printf("|\n");
+   }
+   printf("%s", s);
+   printf("Le nombre d'enregistrements : %d\n", buf.NB);
 
 }
 
 
-// procedure pour afficher l'entete d'un fichier
-void afficher_entete(Entete e) {
-	char s[50] = "+----------+----------+-----------+----------+\n";
-	char nb[5];
-	sprintf(nb, "% 4d", e.nb);
-	char pos[5];
-	sprintf(pos, "% 4d", e.pos);
-	char cpt_inser[5];
-	sprintf(cpt_inser, "% 4d", e.cpt_inser);
-	char cpt_supp[5];
-	sprintf(cpt_supp, "% 4d", e.cpt_supp);
-	printf("Entete\n");
-	printf("%s", s);
-	printf("|    nb    |    pos   | cpt_inser | cpt_supp |\n");
-	printf("%s", s);
-	printf("|	   |	      |		  |	     |\n");
-	printf("|  %s	   |  %s    |  %s 	  |  %s    |\n", nb, pos, cpt_inser, cpt_supp);
-	printf("|	   |	      |		  |	     |\n");
-	printf("%s", s);
-	printf("|__ nb : le nombre de blocs utilises\n");
-	printf("|__ pos : la position libre au dernier bloc\n");
-	printf("|__ cpt_inser : le compteur d'insertions\n");
-	printf("|__ cpt_supp : le compteur de suppression\n");
+//char *recuperer_se(TOVC *F, int i, int j) {
+void recuperer_se(Buffer buf,  int j, Semi se) {
+   sprintf(se, "%s", "");	// initialser en chaine vide
+//   LireDir(F, i, &buf);
+
+	if (j > buf.NB) {	// enregistrement introuvable
+		printf("Enregistrement non disponible dans ce bloc\n");
+		exit(1);
+	} else {	// recherche de l'enregistrement dans le bloc
+		char *pos = strchr(buf.tab , '#') ;	
+		int index = 0;
+		int count = 0;
+		while ((pos != NULL) && count < j) {
+			index = (pos - buf.tab) + 1;
+			pos = strchr(buf.tab + index, '#'); 
+			count++;
+			debug("%d %d", count, index);
+		}
+		debug("%d", index);
+		int m = index;
+		int n = 0;
+		while (buf.tab[m] != '#') {
+			se[n] = buf.tab[m];
+			n++; m++;
+		}
+		se[n] = '\0';
+		debug("%d", n);
+	}
 }
 
 int main () {
+/*
 	 Tenreg e;
 	 debug("%li", sizeof(Tenreg));
 	 e.taille = 13;
@@ -186,7 +131,7 @@ int main () {
 	 semi_enreg(en, se);
 	 debug("%i %i %i %s", en->taille, en->cle, en->supp, en->info);
 	 free(en);
-	 printf("\n");
+	 rintf("\n");
 
 	 Entete ent;
 	 ent.nb = 100;
@@ -196,10 +141,15 @@ int main () {
 	 afficher_entete(ent);
 
 	 printf("\n");
+*/	 
 	 Buffer buf;
 	 buf.NB = 10;
-	 strcpy(buf.tab, "nJyGkYnKuiVbXpWewuSfhdZAMxAukaxdRTOXlNHjznRrZCrMwbsGNTLAIcdcPDnUKJaEGqPfLthZLPxeFYovdIWgIOHOSmynxaicDZBXILdBXZXcUhWpaclpjFnXyarVLRtAtdPhewwgMYtJBRIGcnltolXraUNSLICftjgPIFUgtYccleGcIamcyxSZsXCpyybcPrcnDIEaUWUAIRLMbagEWfFpgZDcRmTsphqpsqAxjIWYelWNlpAzWPpgHaZWZqnIlLawIzyCBqGZEKZWpsPLFbcQZleCHelkzVzifkagvOJEoDjHLRbcmEsgwNevjPUjPpiKFxgjJqgESwHrohbEyPoHAyvUbbTkKkXCPYerCYZREbsjhGxUCZahuNAYQovoNVkHqMBjPMVmLqawWHZOJgRpkRzCNpInCIKAoKuYKbiFzWkLgexZkXOGXbRgfynSpwWZCDedSTSKJCrzBWCjaOJzpoetHIvExlUgNzQHsGLdqlTxYnMRvsDHzLtmRaiOrpOceBlMayGnXjqFiLhdQnlNQBpBDAYcgntLIxOHAyBupNVUijCrEOFAKEFcbTAwZLpzayihtoEpQdEMbmnfhXSPckSHaxNTLItEZRkkoIkIWFxejLbnirOXkSSaesTbErAnQiLKYnPgwsYqKqjnlCsOwsQCLitCONoBfoNDJzGBEhHhfTdqjsfbMXFuGwGpeScbBZWliGBOtpxEFZvHLAIqJgZvuvlkDMIvJXPnuXogsSiwoCfSrtAhnPLeNFGDFYcHfCaOnXFRJFauIIMGetxybejXgRTHmZVmeYPOSZSbMUbjydRVlkIFkGGnKgORGjNVQZQGLjLYYxTYJfJgWKLsdMSutRsBptCVyLYQtAXEvhynFQzAootQeejsUEXObmQPayXTtzqXiTAQdkAyjrMIUzgpORyyJBqwzIresoeengKWvDhBfUGPHUesMafSphslUPlmUoQqKsyXlOaIKVyWpeZqzckohRTsCqjLVARqabHyzywXWgiTwKQb");
-	 afficher_bloc(buf, 4);
+	 strcpy(buf.tab, "nJyGkYn#uiVbXpWewuS#hdZAMxAuka#dRTOXlNH$z#RrZCrMwbsGNTLAIcdcPDn#KJaEGqPfLthZLPxeFYovdIWgIOHOSmynxaicDZBXILdBXZXcUhWpaclpjFnXya$VLRtAtdPhewwgMYtJBRIGcnltolXraUNSLICftjgPIFUgtYccleGcIamcyxSZsXCpyybcPrcnDIEaUWUAIRLMbagEWfFpgZDcRmTsphqpsqAxjIWYelWNlpAzWPpgHaZWZqnIlLawIzyCBqGZEKZWpsPLFbcQZleCHelkzVzifkagvOJEoDjHLRbcmEsgwNevjPUjPpiKFxgjJqgESwHrohbEyPoHAyvUbbTkKkXCPYerCYZREbsjhGxUCZahuNAYQovoNVkHqMBjPMVmLqawWHZOJgRpkRzCNpInCIKAoKuYKbiFzWkLgexZkXOGXbRgfynSpwWZCDedSTSKJCrzBWCjaOJzpoetHIvExlUgNzQHsGLdqlTxYnMRvsDHzLtmRaiOrpOceBlMayGnXjqFiLhdQnlNQBpBDAYcgntLIxOHAyBupNVUijCrEOFAKEFcbTAwZLpzayihtoEpQdEMbmnfhXSPckSHaxNTLItEZRkkoIkIWFxejLbnirOXkSSaesTbErAnQiLKYnPgwsYqKqjnlCsOwsQCLitCONoBfoNDJzGBEhHhfTdqjsfbMXFuGwGpeScbBZWliGBOtpxEFZvHLAIqJgZvuvlkDMIvJXPnuXogsSiwoCfSrtAhnPLeNFGDFYcHfCaOnXFRJFauIIMGetxybejXgRTHmZVmeYPOSZSbMUbjydRVlkIFkGGnKgORGjNVQZQGL$LYYxTYJfJgWKLsdMSutRsBptCVyLYQtAXEvhynFQzAootQeejsUEXObmQPayXTtzqXiTAQdkAyjrMIUzgpORyyJBqwzIresoeengKWvDhBfUGPHUesMafSphslUPlmU$QqKsyXlOaIKVyWpeZqzckohRTsCqjLVARqabHyzywXWgiTwKQb");
+	 Afficher_Bloc(buf, 4);
+	 Semi se;
+	 sprintf(se, "%s", ""); 
+	 recuperer_se(buf, 4, se);
+	 printf("%s", se);
 	 printf("\nTime elapsed : %.3f s.\n",1.0 * clock() /CLOCKS_PER_SEC);
 	 return 0;
 }

@@ -235,7 +235,6 @@ void Afficher_Bloc(TOVC *F, int i) {
    }
    printf("%s", s);
    printf("Le nombre d'enregistrements : %d\n", buf.NB);
-
 }
 
 
